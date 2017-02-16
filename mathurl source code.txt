@@ -1,0 +1,586 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+
+<title>mathURL</title>
+<style type="text/css">
+html, body { 
+  font-family: "Bitstream Vera Serif", Georgia, serif;
+  margin: 0; padding: 0; height: 100%;
+}
+
+#header h1, #header p { display:inline}
+
+#tagline {
+   color: #666;
+   font-style: italic;
+}
+#container {
+  position: relative;
+  margin: 0; padding: 0;
+  min-width: 100%;
+  min-height: 100%;
+  height: auto !important;
+}
+
+a { color: inherit; text-decoration:none }
+a:hover { text-decoration: underline }
+
+#content form {
+
+}
+
+#header, #footer, #content { padding: 1em; }
+#header { padding-bottom: 0; }
+#content { padding-top: 0; padding-bottom: 4em;}
+#footer { 
+  position: absolute;
+  bottom: 0;
+  color: #333;
+  text-transform: lowercase
+}
+
+#loader {
+  display: none;
+  width:0;
+  float:left
+}
+#image {
+  font-family: cmtt10, monospace;
+  color: #fff;
+  font-size: 50%;
+}
+#latexcontainer {
+  padding-right: 300px;
+}
+#latexinput {
+  position: relative; 
+  float: left;
+  width: 100%;
+}
+
+#latexinput textarea { 
+  font-family: cmtt10, "Menlo", monospace;
+  font-size: 105%;
+  margin: 0;
+  border: 1px solid #aaa;
+  resize: vertical;
+  width: 98%;
+  height: 30em;
+  min-height: 3em;
+}
+#controls {  
+  margin-top: 4px;
+  width: 98%;
+}
+#controls input {
+
+}
+#controls, #latexbuttons { font-family: cmss10, sans-serif }
+#latexbuttons {
+  display: none;
+  color: #333;
+  float: right;
+  width: 300px;
+  margin-right: -300px;
+}
+#sidead {
+  color: #333;
+  float: right;
+  width: 300px;
+  margin-right: -300px;
+clear: right;
+}
+
+#latexbuttons .pane { margin-bottom: 3px;  border: 1px solid #aaa; }
+#latexbuttons .pane .contents .padding { padding: 3px; }
+#latexbuttons .pane .header {
+  padding: 3px;
+  text-transform: lowercase;
+  background: #ccc;
+  font-size: 90%;
+  font-weight: bold;
+}
+
+#latexbuttons .pane .header a { text-decoration: none; }
+#latexbuttons .pane .header a:hover { color: #666 }
+
+#latexbuttons .pane .contents a {  text-decoration: none;  padding: 1px; display: inline-block; }
+#latexbuttons .pane .contents a:hover {  opacity: 0.5; }
+#latexbuttons .pane .contents a img {  border: none; }
+#latexbuttons .pane .contents a img.blockimage {  margin: 0.5em; }
+
+#latexbuttons hr {
+  margin: 5px 0 5px 0;
+  background-color: #ccc;
+  border: 0;
+  height: 1px;
+}
+
+textarea, #latexbuttons .pane {
+  border-radius: 2px;
+}
+
+</style>
+<style type="text/css" media="only screen and (device-width: 768px)">
+body { font-size: 130% }
+#latexinput textarea { height: 400px }
+h1 { font-size: 120%}
+#tagline { font-size: 80%}
+#content { padding-bottom: 1em }
+#sidead { display: none }
+</style>
+
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js
+<view-source:http://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js>" type="text/javascript"></script> 
+<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.13/jquery-ui.min.js
+<view-source:http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.13/jquery-ui.min.js>" type="text/javascript"></script>
+<script type="text/javascript">
+//<![CDATA[
+
+var t;
+var lastlatex;
+var latexhasfocus;
+var maxlen;
+
+function do_delay (func,delay) {
+   clearTimeout(t);  // should be okay even if t is invalid
+   if (delay > 0) {
+     t = setTimeout( func, delay );
+   } else {
+     func();
+   }
+}
+function latex_preview () {
+    $('#loader').css("display","block"); // since it takes some time to load
+    var modestring = "";
+    if (document.getElementById('mode').value == "text") {
+      modestring = "\\textmode ";
+    } else if (document.getElementById('mode').value == "inline") {
+      modestring = "\\inlinemode ";
+    }
+    document.getElementById('image').src = "http://mathurl.com/render.cgi?"+escape(modestring+document.getElementById('latex').value+"\\nocache");
+}
+function delay_preview() {
+    $('#loader').css("display","block"); 
+    do_delay( function(){
+        latex_preview()
+    }, 700 );
+}
+new function($) { // http://stackoverflow.com/questions/499126/jquery-set-cursor-position-in-text-area
+    $.fn.setCursorPosition = function(pos) {
+	if ($(this).get(0).setSelectionRange) {
+	    $(this).get(0).setSelectionRange(pos, pos);
+	} else if ($(this).get(0).createTextRange) {
+	    var range = $(this).get(0).createTextRange();
+	    range.collapse(true);
+	    range.moveEnd('character', pos);
+	    range.moveStart('character', pos);
+	    range.select();
+	}
+    }
+}(jQuery);
+new function($) { 
+    $.fn.replaceSelection = function(text) {
+	if ($(this)[0].setSelectionRange) {
+	    $(this)[0].value = $(this)[0].value.substr(0, $(this)[0].selectionStart) 
+	                       + text
+	                       + $(this)[0].value.substr($(this)[0].selectionEnd, $(this)[0].value.length);
+	} else if ($(this)[0].createTextRange) {
+	    $(this)[0].focus();
+	    document.selection.createRange().text = text;
+	}
+    }
+}(jQuery);
+
+
+$(document).ready(function() {
+
+    $('#image').src = "http://mathurl.com/5euwuy.png";
+
+    $('#latexbuttons').css("display","block");
+    $('#latexbuttons').accordion({ header: "div.header", autoHeight: false, collapsible: true, active: false });
+
+    $('#preview').onclick = latex_preview;
+    $('#preview').type = "button";
+
+    $('#loader').css("display","block");
+    $('#image').load(function(){
+        $('#loader').css("display","none");
+        if (latexhasfocus) { // a hack to make safari redraw
+             $('#container').css("padding-top","1px");
+        }
+    });
+
+    $('#latexbuttons .contents a').click( function(event) {
+        event.preventDefault();
+        var start = $('#latex')[0].selectionStart;
+        var text = $(this).attr("title");
+        var offset = text.search(/\{\}/)+1;	// search for empty {} or amp
+        if (offset == 0) offset = text.search(/ \&/);
+        if (offset == 0) offset = text.search(/\$\$/);
+        if (offset <= 0) offset = text.length;
+        $('#latex').replaceSelection( text );
+        $('#latex').focus();
+        $('#latex')[0].setSelectionRange(start + offset, start + offset);
+	// see http://groups.google.com/group/jquery-en/browse_thread/thread/febb1c9927b33d85
+        delay_preview();
+    });
+    $('#latexbuttons .header').click( function(e) {	$('#latex').focus();    });
+
+    $('#clear').click( function(e) {
+      lastlatex = "";
+      $('#latex').val('');
+      $('#image').attr("src","http://mathurl.com//images/noinput.png"); 
+      $('#latex').focus();
+    });
+    lastlatex = $('#latex').val();
+    maxlen = 8000;
+    $('#latex').keyup( function(e) { 
+	    if ( $('#latex').val() != lastlatex ) {
+                if ( $('#latex').val().length > maxlen ) {
+                    $('#latex').val( $('#latex').val().substring(0,maxlen) );
+                    alert('Exceeded mathURL input size');
+                } 
+                lastlatex = $('#latex').val();
+		delay_preview();
+	    }
+	});
+    $('#latex').focus( function() { latexhasfocus = 1; } );
+    $('#latex').blur( function()  { latexhasfocus = 0; } );
+    $('#latex').focus();
+});
+//]]>
+</script>
+
+</head>
+<body>
+  <div id="container">
+
+    <div id="header">
+      <h1 style="margin-top:0; margin-bottom:0"><a href="http://mathurl.com/ <view-source:http://mathurl.com/>">mathURL</a></h1>
+      <p style="margin-top:0">
+	<small id="tagline">live equation editing &middot; permanent short links &middot; LaTeX+AMS input</small>
+      </p>
+    </div>
+
+    <div id="content">
+      
+      <div id="loader"><img src="loader.gif <view-source:http://mathurl.com/loader.gif>" alt="" /></div>
+      <p>
+	
+	  <img id="image" src="<view-source:http://mathurl.com/>" style="border: 0; padding: 1ex 2ex 1ex 2ex" alt="" />
+      </p>
+      <form action="http://mathurl.com/ <view-source:http://mathurl.com/>" method="post">
+	  <div id="latexcontainer">
+	    <div id="latexinput">
+	      <textarea name="latex" id="latex" rows="16" spellcheck="false" cols="80" accesskey="t">\zeta(s) = \sum_{n=1}^\infty \frac{1}{n^s}</textarea><br />
+	      <div id="controls">
+		<div style="float:left">
+		  <input type="submit" id="preview" name="preview" value="preview" accesskey="p" style="display:none" />
+		  <input type="submit" name="make" value="make mathURL" accesskey="m" style="font-weight: bold" />&nbsp;&nbsp;&nbsp;&nbsp;<small>format as: </small><select name="mode" id="mode" onchange="latex_preview()">
+		    <option value="math" selected="selected">equation</option>
+		    <option value="inline" >inline equation</option>
+		    <option value="text" >paragraph</option>
+		  </select>
+		</div>
+		<input type="button" id="clear" value="clear input" style="float:right" />
+	      </div>
+
+	    </div>
+
+	    <div id="latexbuttons">
+
+	      <div class="pane">
+		<div class="header"><a href="# <view-source:http://mathurl.com/#>">Layout</a></div>
+		<div class="contents"><div class="padding">
+		  <a href="# <view-source:http://mathurl.com/#>" class="insert" title="^{}"><img src="images/sup.png <view-source:http://mathurl.com/images/sup.png>" style="padding-bottom: 4px" alt="" /></a>&nbsp;
+		  <a href="# <view-source:http://mathurl.com/#>" title="_{}"><img src="images/sub.png <view-source:http://mathurl.com/images/sub.png>" style="padding-top: 7px" alt="" /></a>&nbsp;
+		  <a href="# <view-source:http://mathurl.com/#>" title="\frac{}{}"><img src="images/frac.png <view-source:http://mathurl.com/images/frac.png>" alt="" /></a>
+		  <hr />
+		  <a href="# <view-source:http://mathurl.com/#>" title="\begin{pmatrix} &amp; \\ &amp; \end{pmatrix}"><img src="images/pmatrix.png <view-source:http://mathurl.com/images/pmatrix.png>" class="blockimage" alt="" /></a>
+		  <a href="# <view-source:http://mathurl.com/#>" title="\begin{align*} &amp; = \\ &amp; = \end{align*}"><img src="images/align.png <view-source:http://mathurl.com/images/align.png>" class="blockimage" alt="" /></a>
+		  <a href="# <view-source:http://mathurl.com/#>" title="= \begin{cases} &amp; \text{if } \\ &amp; \text{if } \end{cases}"><img src="images/cases.png <view-source:http://mathurl.com/images/cases.png>" class="blockimage" alt="" /></a>
+		  <hr />
+		  <a href="# <view-source:http://mathurl.com/#>" title="\begin{itemize} % must be in paragraph mode \item \item \end{itemize}"><img src="images/itemize.png <view-source:http://mathurl.com/images/itemize.png>" class="blockimage" alt="" /></a>
+		  <a href="# <view-source:http://mathurl.com/#>" title="\begin{enumerate} % must be in paragraph mode \item \item \end{enumerate}"><img src="images/enumerate.png <view-source:http://mathurl.com/images/enumerate.png>" class="blockimage" alt="" /></a>
+	      </div></div>
+	    </div>
+
+	    <div class="pane">
+	      <div class="header"><a href="# <view-source:http://mathurl.com/#>">Letters and Symbols</a></div>
+	      <div class="contents"><div class="padding">
+		<a href="# <view-source:http://mathurl.com/#>" title="\alpha">&alpha;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\beta">&beta;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\gamma">&gamma;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\delta">&delta;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\epsilon">&epsilon;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\zeta">&zeta;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\eta">&eta;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\theta">&theta;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\iota">&iota;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\kappa">&kappa;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\lambda">&lambda;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\mu">&mu;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\nu">&nu;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\xi">&xi;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\pi">&pi;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\rho">&rho;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\sigma">&sigma;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\tau">&tau;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\upsilon">&upsilon;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\phi">&phi;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\chi">&chi;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\psi">&psi;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\omega">&omega;</a>
+		<hr />
+		<a href="# <view-source:http://mathurl.com/#>" title="\Gamma">&Gamma;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\Delta">&Delta;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\Theta">&Theta;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\Lambda">&Lambda;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\Xi">&Xi;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\Pi">&Pi;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\Sigma">&Sigma;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\Upsilon">&Upsilon;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\Phi">&Phi;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\Psi">&Psi;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\Omega">&Omega;</a>
+		<hr />
+		<a href="# <view-source:http://mathurl.com/#>" title="\infty">&infin;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\aleph">&alefsym;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\hbar"><img src="images/hbar.png <view-source:http://mathurl.com/images/hbar.png>" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\emptyset">&empty;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\ell"><img src="images/ell.png <view-source:http://mathurl.com/images/ell.png>" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\angle">&ang;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\mathbb{R}"><img src="images/R.png <view-source:http://mathurl.com/images/R.png>" style="padding-bottom: 1px" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\mathbb{C}"><img src="images/C.png <view-source:http://mathurl.com/images/C.png>" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\mathbb{Z}"><img src="images/Z.png <view-source:http://mathurl.com/images/Z.png>" style="padding-bottom: 1px" alt="" /></a>
+	      </div></div>
+	    </div>
+	    <div class="pane">
+	      <div class="header"><a href="# <view-source:http://mathurl.com/#>">Operators and Relations</a></div>
+	      <div class="contents"><div class="padding">
+		<a href="# <view-source:http://mathurl.com/#>" title="\cdot">&sdot;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\times">&times;</a>
+ 		<a href="# <view-source:http://mathurl.com/#>" title="\div"><img src="images/div.png <view-source:http://mathurl.com/images/div.png>" alt="" /></a>
+ 		<a href="# <view-source:http://mathurl.com/#>" title="\surd">&radic;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\pm"><img src="images/pm.png <view-source:http://mathurl.com/images/pm.png>" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\mp"><img src="images/mp.png <view-source:http://mathurl.com/images/mp.png>" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\nabla">&nabla;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\partial">&part;</a>
+		<hr />
+ 		<a href="# <view-source:http://mathurl.com/#>" title="\sqrt{}"><img src="images/sqrt.png <view-source:http://mathurl.com/images/sqrt.png>" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\sum_{}^{}">&sum;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\prod_{}^{}">&prod;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\int_{}^{}">&int;</a>
+		<hr />
+		<a href="# <view-source:http://mathurl.com/#>" title="\neq">&ne;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\leq">&le;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\geq">&ge;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\sim">&sim;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\approx">&asymp;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\cong">&cong;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\equiv">&equiv;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\propto">&prop;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\ll"><img src="images/ll.png <view-source:http://mathurl.com/images/ll.png>" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\gg"><img src="images/gg.png <view-source:http://mathurl.com/images/gg.png>" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\implies">&rArr;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\Leftrightarrow">&hArr;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\rightleftharpoons"><img src="images/harpoons.png <view-source:http://mathurl.com/images/harpoons.png>" alt="" /></a>
+		<hr />
+		<a href="# <view-source:http://mathurl.com/#>" title="\in">&isin;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\nin">&notin;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\subset">&sub;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\supset">&sup;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\subseteq">&sube;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\supseteq">&supe;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\setminus">\</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\cap">&cap;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\cup">&cup;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\wedge">&and;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\vee">&or;</a>
+		<hr />
+		<a href="# <view-source:http://mathurl.com/#>" title="\forall">&forall;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\exists">&exist;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\Re">&real;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\Im">&image;</a>
+	      </div></div>
+	    </div>
+	    
+	    <div class="pane">
+	      <div class="header"><a href="# <view-source:http://mathurl.com/#>">Punctuation and Accents</a></div>
+	      <div class="contents"><div class="padding">
+		<a href="# <view-source:http://mathurl.com/#>" title="\ldots">&hellip;</a>
+		<hr />
+		<a href="# <view-source:http://mathurl.com/#>" title="\leftarrow">&larr;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\rightarrow">&rarr;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\Leftarrow">&lArr;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\Rightarrow">&rArr;</a>
+		<hr />
+		<a href="# <view-source:http://mathurl.com/#>" title="\left(">(</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\right)">)</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\left[">[</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\right]">]</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\left\{">{</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\right\}">}</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\left\langle">&lang;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\right\rangle">&rang;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\|">||</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\lceil">&lceil;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\rceil">&rceil;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\lfloor">&lfloor;</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\rfloor">&rfloor;</a>
+		<hr />
+		<a href="# <view-source:http://mathurl.com/#>" title="'"><img src="images/prime.png <view-source:http://mathurl.com/images/prime.png>" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\hat{}"><img src="images/hat.png <view-source:http://mathurl.com/images/hat.png>" style="padding-top:2px;" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\tilde{}"><img src="images/tilde.png <view-source:http://mathurl.com/images/tilde.png>" style="padding-top:2px;" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\bar{}"><img src="images/bar.png <view-source:http://mathurl.com/images/bar.png>" style="padding-top:4px;" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\vec{}"><img src="images/vec.png <view-source:http://mathurl.com/images/vec.png>" style="padding-top:2px;" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\dot{}"><img src="images/dot.png <view-source:http://mathurl.com/images/dot.png>" style="padding-top:2px;" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\ddot{}"><img src="images/ddot.png <view-source:http://mathurl.com/images/ddot.png>" style="padding-top:2px;" alt="" /></a>
+		<hr />
+		<a href="# <view-source:http://mathurl.com/#>" title="\`{}"><img src="images/grave.png <view-source:http://mathurl.com/images/grave.png>" style="padding-top:2px;" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\'{}"><img src="images/acute.png <view-source:http://mathurl.com/images/acute.png>" style="padding-top:2px;" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\^{}"><img src="images/circ.png <view-source:http://mathurl.com/images/circ.png>" style="padding-top:2px;" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\&quot;{}"><img src="images/uml.png <view-source:http://mathurl.com/images/uml.png>" style="padding-top:2px;" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\~{}"><img src="images/ttilde.png <view-source:http://mathurl.com/images/ttilde.png>" style="padding-top:2px;" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\r{}"><img src="images/ring.png <view-source:http://mathurl.com/images/ring.png>" style="padding-top:2px;" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\u{}"><img src="images/breve.png <view-source:http://mathurl.com/images/breve.png>" style="padding-top:2px;" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\v{}"><img src="images/hachek.png <view-source:http://mathurl.com/images/hachek.png>" style="padding-top:2px;" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\c{}"><img src="images/cedilla.png <view-source:http://mathurl.com/images/cedilla.png>" style="padding-top:2px;" alt="" /></a>
+	      </div></div>
+	    </div>
+	    
+	    <div class="pane">
+	      <div class="header"><a href="# <view-source:http://mathurl.com/#>">Functions</a></div>
+	      <div class="contents" style="font-size: 80%"><div class="padding">
+		<a href="# <view-source:http://mathurl.com/#>" title="\arccos">arccos</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\arcsin">arcsin</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\arctan">arctan</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\cos">cos</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\cosh">cosh</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\cot">cot</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\coth">coth</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\csc">csc</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\sec">sec</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\sin">sin</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\sinh">sinh</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\tan">tan</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\tanh">tanh</a>
+		<hr />
+		<a href="# <view-source:http://mathurl.com/#>" title="\exp">exp</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\log">log</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\ln">ln</a>
+		<hr />
+		<a href="# <view-source:http://mathurl.com/#>" title="\max">max</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\min">min</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\sup">sup</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\inf">inf</a>
+		<hr />
+		<a href="# <view-source:http://mathurl.com/#>" title="\lim">lim</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\gcd">gcd</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\hom">hom</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\ker">ker</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\det">det</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\bmod">mod</a>		
+	      </div></div>
+	    </div>
+	    
+	    <div class="pane">
+	      <div class="header"><a href="# <view-source:http://mathurl.com/#>">Formatting</a></div>
+	      <div class="contents"><div class="padding">
+		<a href="# <view-source:http://mathurl.com/#>" title="\mathbf{}"><b>bold</b></a><br />
+		<a href="# <view-source:http://mathurl.com/#>" title="\mathtt{}"><tt>monospace</tt></a><br />
+		<a href="# <view-source:http://mathurl.com/#>" title="\mathfrak{}"><img src="images/fraktur.png <view-source:http://mathurl.com/images/fraktur.png>" alt="" /></a><br />
+		<a href="# <view-source:http://mathurl.com/#>" title="\mathbb{}"><img src="images/bb.png <view-source:http://mathurl.com/images/bb.png>" alt="" /></a><br />
+		<a href="# <view-source:http://mathurl.com/#>" title="\mathcal{}"><img src="images/cal.png <view-source:http://mathurl.com/images/cal.png>" alt="" /></a>
+		<hr />
+		<a href="# <view-source:http://mathurl.com/#>" title="\color{red}" style="color: #f00">red</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\color{Orange}" style="color: #f90">orange</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\color{green}" style="color: #0f0">green</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\color{blue}" style="color: #00f">blue</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\color{Purple}" style="color: #f0f">purple</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\color{black}" style="color: #000">black</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\color{Gray}" style="color: #999">gray</a>
+<!--		<a href="#" title="\text{\colorbox{blue}{\color{red}$$}}" style="color: #f00; background: #00f">colorbox</a> -->
+		<a href="# <view-source:http://mathurl.com/#>" title="% note: for embedded images on black webpages (transparent pixels show
+as white on mathurl.com) \color{white}\pagecolor{black} " style="color: #fff; background: #000">reverse</a>
+		<hr />
+		<a href="# <view-source:http://mathurl.com/#>" title="\huge " style="font-size:200%">huge</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\large " style="font-size:120%">large</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\small " style="font-size:80%">small</a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\tiny " style="font-size:50%">tiny</a>
+	      </div></div>
+	    </div>
+	    
+	    <div class="pane">
+	      <div class="header"><a href="# <view-source:http://mathurl.com/#>">Common forms</a></div>
+	      <div class="contents"><div class="padding">
+		<a href="# <view-source:http://mathurl.com/#>" title="\frac{\partial}{\partial x}"><img src="images/partialpartialx.png
+<view-source:http://mathurl.com/images/partialpartialx.png>" class="blockimage" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\frac{\text{d}}{\text{d}x}"><img src="images/ddx.png <view-source:http://mathurl.com/images/ddx.png>" class="blockimage" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\int_{a}^{b} f(x) \text{d}x"><img src="images/intdx.png <view-source:http://mathurl.com/images/intdx.png>" class="blockimage" alt="" /></a>
+		<a href="# <view-source:http://mathurl.com/#>" title="\lim_{x \rightarrow a} f(x)"><img src="images/limfx.png <view-source:http://mathurl.com/images/limfx.png>" class="blockimage" alt="" /></a>
+	      </div></div>
+	    </div>
+	    
+	  </div><!-- latexbuttons -->
+	  <div id="sidead">
+<!--
+<OBJECT classid="clsid:D27CDB6E-AE6D-11cf-96B8-444553540000" codebase="http://fpdownload.macromedia.com/get/flashplayer/current/swflash.cab" id="Player_5221f15f-7afd-4ffc-b11f-c4eb1dd5707a"  WIDTH="300px" HEIGHT="250px"> <PARAM NAME="movie" VALUE="http://ws.amazon.com/widgets/q?ServiceVersion=20070822&MarketPlace=US&ID=V20070822%2FUS%2Fma0b19-20%2F8009%2F5221f15f-7afd-4ffc-b11f-c4eb1dd5707a&Operation=GetDisplayTemplate"><PARAM NAME="quality" VALUE="high"><PARAM NAME="bgcolor" VALUE="#FFFFFF"><PARAM NAME="allowscriptaccess" VALUE="always"><embed src="http://ws.amazon.com/widgets/q?ServiceVersion=20070822&MarketPlace=US&ID=V20070822%2FUS%2Fma0b19-20%2F8009%2F5221f15f-7afd-4ffc-b11f-c4eb1dd5707a&Operation=GetDisplayTemplate" id="Player_5221f15f-7afd-4ffc-b11f-c4eb1dd5707a" quality="high" bgcolor="#ffffff" name="Player_5221f15f-7afd-4ffc-b11f-c4eb1dd5707a" allowscriptaccess="always"  type="application/x-shockwave-flash" align="middle" height="250px" width="300px"></embed></OBJECT> <NOSCRIPT><A HREF="http://ws.amazon.com/widgets/q?ServiceVersion=20070822&MarketPlace=US&ID=V20070822%2FUS%2Fma0b19-20%2F8009%2F5221f15f-7afd-4ffc-b11f-c4eb1dd5707a&Operation=NoScript">Amazon.com Widgets</A></NOSCRIPT>
+ -->
+<!-- <a href="http://nasturtiumlabs.com/player">
+<div style=" width: 298px; border: 1px solid #999; padding: 10px 0px; font-family: sans-serif;" >
+<img src="http://nasturtiumlabs.com/player/icon_128x128.png" height="96" width="96" style="float:left"/>
+<div style="float: left; margin-top: -10px; padding-left: 4px; width: 180px; font-size: 12px">
+<p><b>Nasturtium Player for Mac</b><br />
+<br />
+An alternative to iTunes. Easy playlists and YouTube streaming.
+</p>
+</div>
+<div style="clear: both"></div>
+</div>
+</a> -->
+
+	  </div>
+
+
+          <div style="clear: left"></div>
+
+
+	</div><!-- latexcontainer -->
+	
+    </form>
+    
+  </div><!-- content -->
+
+  <div id="footer">
+    <small><a href="/help/ <view-source:http://mathurl.com/help/>" accesskey="h"><span style="color: #aa0000; font-weight:bold">help</span> &amp; about</a>&nbsp;&nbsp;&middot;&nbsp;&nbsp;<a href="http://mathurl.wordpress.com/ <view-source:http://mathurl.wordpress.com/>">blog</a>&nbsp;&nbsp;&middot;&nbsp;&nbsp;mathurl at mathurl dot com&nbsp;&nbsp;&middot;&nbsp;&nbsp;by <a href="http://web.mit.edu/kaoj/www/ <view-source:http://web.mit.edu/kaoj/www/>">justin kao</a></small>
+  </div>
+
+  <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-358589-5', 'auto');
+    ga('send', 'pageview');
+
+    </script>
+
+
+<script type="text/javascript">
+window.onload = function () {
+    do_delay( function() { 
+      $('#latexbuttons').accordion('activate',0);
+      $('#latex').focus();
+    }, 500);
+    latex_preview();
+}
+
+</script>
+
+</div></body></html>
+
